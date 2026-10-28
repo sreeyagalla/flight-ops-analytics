@@ -1,0 +1,20 @@
+[project]
+name = "aeng"
+version = "0.1.0"
+description = "Self-serve analytics engineering starter: pipeline, data-quality checks, anomaly detection and a grounded Q&A agent"
+requires-python = ">=3.10"
+dependencies = ["duckdb>=1.0", "pandas>=2.0", "streamlit>=1.30", "plotly>=5.0"]
+
+[project.optional-dependencies]
+llm = ["anthropic>=0.40"]
+dev = ["pytest>=8"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+aeng = ["sql/*.sql"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

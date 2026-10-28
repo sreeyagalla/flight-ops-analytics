@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flight Ops Analytics</title>
+<meta name="description" content="Self-serve analytics engineering demo on real public flight data: reproducible pipeline, data-quality checks, anomaly detection and a grounded Q&A agent.">
+<style>
+:root{--bg:#f7f8fa;--surface:#fff;--ink:#1b1f27;--ink2:#4a5160;--muted:#7a8191;--line:#e3e6ec;--accent:#2a6fdb;--flag:#d1495b;--ok:#2f8f5b;--warn:#b7791f;--bad:#c53030;--code:#f0f2f6}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1218;--surface:#171b23;--ink:#e8ebf1;--ink2:#b3bac8;--muted:#8a92a3;--line:#262c38;--accent:#6ea3f5;--flag:#ee7a8a;--ok:#5fc08a;--warn:#e0b252;--bad:#f08a8a;--code:#1e232d}}
+:root[data-theme="dark"]{--bg:#0f1218;--surface:#171b23;--ink:#e8ebf1;--ink2:#b3bac8;--muted:#8a92a3;--line:#262c38;--accent:#6ea3f5;--flag:#ee7a8a;--ok:#5fc08a;--warn:#e0b252;--bad:#f08a8a;--code:#1e232d}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:1000px;margin:0 auto;padding:0 16px 64px}
+header{padding:48px 0 24px}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.15;margin:0 0 12px;letter-spacing:-.02em}
+h2{font-size:22px;margin:0 0 6px;letter-spacing:-.01em}
+.lede{color:var(--ink2);max-width:680px;margin:0 0 20px}
+.links a{display:inline-block;margin-right:10px;padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);text-decoration:none;font-weight:600;font-size:14px}
+.links a.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin:28px 0 8px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.tile b{display:block;font-size:26px;letter-spacing:-.02em}
+.tile span{color:var(--muted);font-size:13px}
+section{margin-top:44px}
+.sub{color:var(--ink2);margin:0 0 16px;font-size:15px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+button.chip{font:inherit;font-size:14px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:7px 12px;border-radius:999px;cursor:pointer}
+button.chip:hover{border-color:var(--accent)}
+button.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.answer{white-space:pre-wrap;font-size:15px;border-left:4px solid var(--ok);padding:10px 14px;background:var(--code);border-radius:0 8px 8px 0}
+.answer.refused{border-left-color:var(--warn)}
+details{margin-top:12px}summary{cursor:pointer;color:var(--ink2);font-size:14px}
+pre{background:var(--code);padding:12px;border-radius:8px;overflow:auto;font-size:12.5px;margin:8px 0 0}
+.controls{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px}
+select{font:inherit;font-size:14px;padding:7px 10px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+.chartbox{position:relative;height:340px}
+.note{color:var(--muted);font-size:13px;margin-top:10px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+.st{font-weight:700;font-size:12px;padding:2px 8px;border-radius:999px;border:1px solid currentColor}
+.st.pass{color:var(--ok)}.st.warn{color:var(--warn)}.st.fail{color:var(--bad)}
+.flow{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch}
+.flow div{flex:1 1 150px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px;font-size:14px}
+.flow div b{display:block;margin-bottom:2px}.flow div span{color:var(--muted);font-size:13px}
+.arrow{flex:0 0 auto!important;border:0!important;background:none!important;padding:0!important;align-self:center;color:var(--muted)}
+ul.honest{margin:8px 0 0;padding-left:20px;color:var(--ink2)}ul.honest li{margin:6px 0}
+footer{margin-top:48px;color:var(--muted);font-size:13px}
+@media (max-width:560px){.arrow{display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Flight Ops Analytics</h1>
+  <p class="lede">A self-serve analytics engineering demo on real public flight data: a reproducible pipeline with automated data-quality checks, a governed metric layer, anomaly detection, and a Q&amp;A agent that can only answer from computed data.</p>
+  <div class="links">
+    <a class="primary" href="https://github.com/sreeyagalla/flight-ops-analytics">View code on GitHub</a>
+    <a href="https://github.com/sreeyagalla/flight-ops-analytics#readme">README</a>
+  </div>
+  <div class="tiles" id="tiles"></div>
+</header>
+
+<section>
+  <h2>Ask the data</h2>
+  <p class="sub">These are the real agent's outputs for each question, computed against the real pipeline output (precomputed for this page). The last two are questions it declines. Run it live with the repo.</p>
+  <div class="card">
+    <div class="chips" id="chips"></div>
+    <div id="qaOut"></div>
+  </div>
+</section>
+
+<section>
+  <h2>Explore</h2>
+  <p class="sub">Governed metrics broken down by dimension. Groups under 100 flights are hidden; destinations show the top 15.</p>
+  <div class="card">
+    <div class="controls">
+      <label>Metric <select id="exMetric"></select></label>
+      <label>Break down by <select id="exDim"></select></label>
+    </div>
+    <div class="chartbox"><canvas id="exChart" role="img" aria-label="Bar chart of the selected metric by the selected dimension"></canvas></div>
+    <p class="note" id="exDef"></p>
+  </div>
+</section>
+
+<section>
+  <h2>Anomalies</h2>
+  <p class="sub">Daily value against its trailing 28-day median. Days with a modified z-score of 3.5 or more are flagged. This is a statistical flag, not a diagnosis.</p>
+  <div class="card">
+    <div class="controls"><label>Series <select id="anSeries">
+      <option value="cancel_rate">Daily cancellation rate</option>
+      <option value="avg_dep_delay">Daily average departure delay (min)</option></select></label></div>
+    <div class="chartbox"><canvas id="anChart" role="img" aria-label="Daily series with flagged anomaly days"></canvas></div>
+    <p class="note" id="anNote"></p>
+  </div>
+</section>
+
+<section>
+  <h2>Pipeline health</h2>
+  <p class="sub">Declarative SQL checks run on every pipeline run. Errors fail the build; warnings are reported.</p>
+  <div class="card" style="overflow-x:auto"><table><thead><tr><th>Status</th><th>Check</th><th>What it verifies</th><th>Bad rows</th></tr></thead><tbody id="dqBody"></tbody></table></div>
+</section>
+
+<section>
+  <h2>How it fits together</h2>
+  <div class="flow">
+    <div><b>Public CSVs</b><span>checksum-pinned download</span></div><div class="arrow">→</div>
+    <div><b>DuckDB</b><span>raw → staging → marts</span></div><div class="arrow">→</div>
+    <div><b>Quality checks</b><span>logged on every run</span></div><div class="arrow">→</div>
+    <div><b>Metric layer</b><span>one definition per metric</span></div><div class="arrow">→</div>
+    <div><b>App + agent</b><span>spec → validated SQL → templated answer</span></div>
+  </div>
+</section>
+
+<section>
+  <h2>Honest scope</h2>
+  <div class="card">
+    <ul class="honest">
+      <li><b>Real:</b> all data is real and public (nycflights13: DOT flight records and NOAA weather, 2013, three NYC-area airports). Nothing is synthetic.</li>
+      <li><b>Solo demo:</b> no real users or stakeholders, so there are no adoption or business-impact numbers.</li>
+      <li><b>Agent:</b> numbers in answers are rendered from SQL results, and a test compares them with independently computed pandas values. The default question parser is rule-based and can misread unusual phrasing. The optional LLM translator has only been tested against a fake client, not a live API.</li>
+      <li><b>Not built:</b> access management, cloud deployment, ML models or fairness analysis.</li>
+    </ul>
+  </div>
+</section>
+
+<footer>Built from the repository's own pipeline and agent by <code>scripts/build_site.py</code>. Data: nycflights13 (US DOT/BTS, NOAA).</footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+const D = __DATA__;
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const fmt = (u, v) => v == null ? "n/a" : u === "pct" ? (v*100).toFixed(1)+"%" : u === "min" ? v.toFixed(1)+" min" : Math.round(v).toLocaleString();
+const esc = t => String(t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const el = id => document.getElementById(id);
+const S = D.summary;
+
+el("tiles").innerHTML = [
+  [S.flights.toLocaleString(), "real flights, "+S.from.slice(0,4)],
+  [S.airlines+" / "+S.dests, "airlines / destinations"],
+  [S.checks, "data-quality checks ("+S.warned+" warning)"],
+  [S.flagged_cancel, "days flagged on cancellation rate"],
+].map(([b,s]) => `<div class="tile"><b>${b}</b><span>${s}</span></div>`).join("");
+
+// ---- Q&A
+const chips = el("chips");
+function showQA(i){
+  [...chips.children].forEach((c,j)=>c.setAttribute("aria-pressed", i===j));
+  const x = D.qa[i];
+  const sql = x.sql ? `<details><summary>How it was computed</summary><pre>${esc(x.sql)}</pre><pre>${JSON.stringify(x.spec,null,2)}</pre></details>` : "";
+  el("qaOut").innerHTML = `<div class="answer ${x.ok?"":"refused"}"></div>${sql}`;
+  el("qaOut").firstChild.textContent = x.text;
+}
+D.qa.forEach((x,i)=>{const b=document.createElement("button");b.className="chip";b.textContent=x.q;b.onclick=()=>showQA(i);chips.appendChild(b)});
+showQA(0);
+
+// ---- Explore
+const exM = el("exMetric"), exD = el("exDim");
+Object.entries(D.metrics).forEach(([k,m])=>exM.add(new Option(m.label,k)));
+Object.entries(D.dims).forEach(([k,l])=>exD.add(new Option(l,k)));
+exM.value = "on_time_rate";
+let exChart;
+function drawExplore(){
+  const m = D.metrics[exM.value], rows = D.explore[exM.value][exD.value];
+  el("exDef").textContent = m.definition;
+  const cfg = {type:"bar",data:{labels:rows.map(r=>r.label),datasets:[{data:rows.map(r=>r.value),backgroundColor:css("--accent"),borderRadius:4,maxBarThickness:42}]},
+    options:{maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${m.label}: ${fmt(m.unit,c.parsed.y)}`,afterLabel:c=>`n = ${rows[c.dataIndex].n.toLocaleString()} flights`}}},
+      scales:{x:{grid:{display:false},ticks:{color:css("--ink2"),maxRotation:60}},y:{grid:{color:css("--line")},ticks:{color:css("--ink2"),callback:v=>fmt(m.unit,v)}}}}};
+  if(exChart) exChart.destroy(); exChart = new Chart(el("exChart"), cfg);
+}
+exM.onchange = exD.onchange = drawExplore; drawExplore();
+
+// ---- Anomalies
+let anChart;
+function drawAnom(){
+  const key = el("anSeries").value, pts = D.anomalies[key], pct = key==="cancel_rate";
+  const f = v => pct ? (v*100).toFixed(1)+"%" : v.toFixed(1)+" min";
+  const flagged = pts.filter(p=>p.flag);
+  anChart && anChart.destroy();
+  anChart = new Chart(el("anChart"),{type:"line",data:{labels:pts.map(p=>p.d),datasets:[
+    {label:"Daily value",data:pts.map(p=>p.v),borderColor:css("--accent"),borderWidth:2,pointRadius:0,tension:0},
+    {label:"Trailing 28-day median",data:pts.map(p=>p.b),borderColor:css("--muted"),borderWidth:1.5,borderDash:[4,4],pointRadius:0},
+    {label:"Flagged day",data:pts.map(p=>p.flag?p.v:null),borderColor:"transparent",backgroundColor:css("--flag"),pointRadius:5,pointBorderColor:css("--surface"),pointBorderWidth:2,showLine:false}]},
+    options:{maintainAspectRatio:false,interaction:{mode:"index",intersect:false},plugins:{legend:{labels:{color:css("--ink2")}},tooltip:{callbacks:{label:c=>c.parsed.y==null?null:`${c.dataset.label}: ${f(c.parsed.y)}`}}},
+      scales:{x:{grid:{display:false},ticks:{color:css("--ink2"),maxTicksLimit:12}},y:{grid:{color:css("--line")},ticks:{color:css("--ink2"),callback:v=>f(v)}}}}});
+  const top = [...flagged].sort((a,b)=>b.v-a.v)[0];
+  el("anNote").textContent = `${flagged.length} of ${pts.length} days flagged. Highest flagged day: ${top.d} at ${f(top.v)}.`;
+}
+el("anSeries").onchange = drawAnom; drawAnom();
+
+// ---- DQ
+el("dqBody").innerHTML = D.dq.map(r=>`<tr><td><span class="st ${r.status}">${r.status.toUpperCase()}</span></td><td><code>${esc(r.check)}</code></td><td>${esc(r.description)}</td><td>${r.bad.toLocaleString()}</td></tr>`).join("");
+
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change",()=>{drawExplore();drawAnom()});
+</script>
+</body>
+</html>
